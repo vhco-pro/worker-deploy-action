@@ -97,7 +97,33 @@ async function main(env: NodeJS.ProcessEnv) {
   const release = verifyRelease(env);
   const { CLOUDFLARE_ACCOUNT_ID: account, CLOUDFLARE_API_TOKEN: token, GITHUB_OUTPUT: output } = env;
   if (!account || !/^[a-f0-9]{32}$/i.test(account) || !token || !output) throw new Error('Missing protected deployment credentials or outputs');
+  const rehearsing = env.WORKER_REHEARSAL === 'true';
+  const rehearsalToken = `synthetic-worker-rehearsal-${env.WORKER_TARGET}`;
+  if (rehearsing && token !== rehearsalToken) throw new Error('Expected the selected environment’s synthetic rehearsal token');
+  if (!rehearsing && token.startsWith('synthetic-worker-rehearsal-')) throw new Error('Activation requires a real deployment token');
   const dir = mkdtempSync(join(env.RUNNER_TEMP ?? '/tmp', 'worker-deploy-'));
+  const wrangler = join(release.project, 'node_modules/wrangler/bin/wrangler.js');
+  if (rehearsing) {
+    const outdir = join(dir, 'upload');
+    const result = spawnSync('node', [wrangler, 'versions', 'upload', release.bundle, '--no-bundle', '--no-upload-source-maps',
+      '--dry-run', '--config', release.configPath, '--outdir', outdir], {
+      cwd: release.project,
+      env: {
+        ...env,
+        CLOUDFLARE_API_TOKEN: '',
+        CLOUDFLARE_ACCOUNT_ID: '',
+        WRANGLER_SEND_METRICS: 'false',
+        WRANGLER_LOG_PATH: join(dir, 'wrangler.log'),
+      },
+      stdio: 'inherit',
+    });
+    if (result.error || result.status !== 0
+      || !readFile(join(outdir, 'worker.mjs')).equals(readFile(release.bundle))) {
+      throw new Error('Rehearsal did not preserve the verified bundle');
+    }
+    console.log(JSON.stringify({ rehearsal: true, worker: release.worker, tag: release.tag, digest: release.digest }));
+    return;
+  }
   async function list(): Promise<Deployment[]> {
     const url = `https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/${release.worker}/deployments`;
     const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, redirect: 'error', signal: AbortSignal.timeout(20_000) });
@@ -110,7 +136,7 @@ async function main(env: NodeJS.ProcessEnv) {
   let invocation = 0;
   function run(args: string[]): string {
     const report = join(dir, `wrangler-${++invocation}.jsonl`);
-    const result = spawnSync('node', [join(release.project, 'node_modules/wrangler/bin/wrangler.js'), ...args], {
+    const result = spawnSync('node', [wrangler, ...args], {
       cwd: release.project,
       env: {
         ...env,

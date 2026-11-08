@@ -25,6 +25,9 @@ inputs:
   token:
     description: Cloudflare deployment token from the protected environment.
     required: true
+  rehearse:
+    description: Verify the selected release and run the no-bundle upload dry run with a synthetic token.
+    default: 'false'
 outputs:
   version:
     description: Cloudflare version serving 100 percent of this target's traffic.
@@ -59,4 +62,5 @@ runs:
         RELEASE_ARTIFACT: ${{ inputs.artifact }}
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.account }}
         CLOUDFLARE_API_TOKEN: ${{ inputs.token }}
+        WORKER_REHEARSAL: ${{ inputs.rehearse }}
       run: bun "$ACTION_ROOT/scripts/activate.ts"
