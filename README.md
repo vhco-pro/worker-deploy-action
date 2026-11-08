@@ -1,17 +1,21 @@
 # Worker deploy action
 
-Activates one verified Worker bundle for an already provisioned Cloudflare
-target. Call it from a protected deployment job after checking out the exact
-release tag and downloading that target's immutable GitHub release assets.
+Verify a published Worker module for a selected Cloudflare target. Choose a
+synthetic rehearsal or activate the exact release on an existing Worker.
 
-Supply the expected Worker name and account independently through the target's
-environment. The action checks the release tag, commit, bundle, target config,
-npm lockfile and toolchain. It uploads the bundle with Wrangler's no-bundle
-path, activates the returned version ID and reads back the active deployment.
-The receipt includes the prior version ID when it is available.
+```mermaid
+flowchart LR
+    A["Release bundle and manifest"] --> B["Check tag, digest and target"]
+    B --> C{"Operation"}
+    C -->|Rehearse| D["Check target secret, then dry run with credentials cleared"]
+    C -->|Activate| E["Upload without rebundling"]
+    E --> F["Activate uploaded version"]
+    F --> G["Confirm active deployment and record previous version"]
+```
 
-The action requires one active version at 100 percent before activation.
-Bootstrap, route changes, state migrations and rollback need their own runbook.
+The action checks the target against the release manifest, checked-out
+configuration and environment's Worker name. Live activation expects a
+provisioned Worker with one version receiving all traffic.
 
-Run `bun test` to exercise the activation protocol. The artifact integration
-test also needs the candidate outputs from the CI action.
+[Configure rehearsal and activation](docs/usage.md) ·
+[Release workflow](https://github.com/vhco-pro/worker-release-workflow)
