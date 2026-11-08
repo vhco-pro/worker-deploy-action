@@ -46,7 +46,9 @@ Rehearsal succeeds once the dry-run bytes match the release module.
 
 Activation stops if the artifact, source, config, toolchain or target does
 not match. It also stops if the serving deployment changed during upload.
-If the same release is already active, the action returns the current receipt.
+If Cloudflare reports the same release already active, the action can return
+the current receipt without another upload. Receipt recovery expects any
+previous deployment it reads to have a single version receiving all traffic.
 
 Record the previous version and the applicable state and route recovery
 procedure before activation. Initial provisioning and rollback are
