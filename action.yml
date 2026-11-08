@@ -1,0 +1,62 @@
+name: Activate Worker bundle
+description: Activate one verified Worker module in one protected Cloudflare target.
+inputs:
+  project:
+    description: Project directory relative to the checked-out tag.
+    default: '.'
+  target:
+    description: Approved target name.
+    required: true
+  worker:
+    description: Worker name configured in the protected GitHub environment.
+    required: true
+  tag:
+    description: Exact immutable release tag.
+    required: true
+  commit:
+    description: Exact release commit.
+    required: true
+  artifact:
+    description: Directory with the immutable release assets for the selected target.
+    required: true
+  account:
+    description: Cloudflare account ID configured in the protected environment.
+    required: true
+  token:
+    description: Cloudflare deployment token from the protected environment.
+    required: true
+outputs:
+  version:
+    description: Cloudflare version serving 100 percent of this target's traffic.
+    value: ${{ steps.activate.outputs.version }}
+  deployment:
+    description: Active Cloudflare deployment ID.
+    value: ${{ steps.activate.outputs.deployment }}
+  previous-version:
+    description: The previously active version ID, for an authorized rollback.
+    value: ${{ steps.activate.outputs.previous_version }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      with:
+        node-version: '24.19.0'
+    - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      with:
+        bun-version: '1.4.3'
+    - shell: bash
+      working-directory: ${{ inputs.project }}
+      run: npm ci --ignore-scripts --no-audit --no-fund
+    - id: activate
+      shell: bash
+      env:
+        ACTION_ROOT: ${{ github.action_path }}
+        WORKER_PROJECT: ${{ inputs.project }}
+        WORKER_TARGET: ${{ inputs.target }}
+        EXPECTED_WORKER: ${{ inputs.worker }}
+        RELEASE_TAG: ${{ inputs.tag }}
+        SOURCE_COMMIT: ${{ inputs.commit }}
+        RELEASE_ARTIFACT: ${{ inputs.artifact }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.account }}
+        CLOUDFLARE_API_TOKEN: ${{ inputs.token }}
+      run: bun "$ACTION_ROOT/scripts/activate.ts"
