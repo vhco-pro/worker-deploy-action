@@ -1,0 +1,23 @@
+name: CodeQL (JS/TS)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 5 * * 1"
+
+# Least-privilege at top level. The job block below must still grant what the
+# reusable needs: a called workflow can never hold more than the calling job.
+permissions: {}
+
+
+jobs:
+  codeql:
+    if: ${{ github.event.repository.visibility == 'public' }}
+    uses: vhco-pro/.github/.github/workflows/reusable-codeql-js.yml@e03ad61274b2bf0738b36ed67dff1c376321fb64 # v1.2.4
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
