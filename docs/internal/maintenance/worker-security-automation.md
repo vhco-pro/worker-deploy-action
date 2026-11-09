@@ -18,6 +18,16 @@ All seven deploy action tests passed against the released v0.1.1 fixtures.
 
 ## Reviews
 
+### R-1
+
+Target: 44fab735db394a52cdd6f43c599d8837ad31dc01
+Model: unknown
+Isolation: procedural
+
+```text
+NO FINDINGS
+```
+
 ## State
 
-Independent review pending.
+Local checks and independent review passed. Hosted verification is pending.
